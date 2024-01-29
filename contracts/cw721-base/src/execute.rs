@@ -199,6 +199,11 @@ where
     ) -> Result<Response<C>, ContractError> {
         let sale_config = self.sale_config.load(deps.storage)?;
 
+        // Check that allowlist mint is open
+        if !sale_config.allowlist_sale_open {
+            return Err(ContractError::AllowlistSaleClosed {});
+        }
+
         // Verify if the sender is on the allowlist
         let is_allowed = self
             .allowlist
@@ -253,8 +258,13 @@ where
         quantity: u64,
         extension: T,
     ) -> Result<Response<C>, ContractError> {
-        // Make sure quantity doesn't exceed max
         let sale_config = self.sale_config.load(deps.storage)?;
+        // Check that public mint is open
+        if !sale_config.public_sale_open {
+            return Err(ContractError::PublicSaleClosed {});
+        }
+
+        // Make sure quantity doesn't exceed max
         if quantity > sale_config.max_per_public {
             return Err(ContractError::MaxMintReached {});
         }

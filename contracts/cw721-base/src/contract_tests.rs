@@ -182,7 +182,7 @@ fn update_sale_state() {
     .unwrap();
     assert_eq!(expected, sale_config);
 
-    // Update private sale
+    // Update public sale
     contract
         .execute(
             deps.as_mut(),
@@ -378,6 +378,31 @@ fn mint_allowlist() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
 
+    // Open allowlist minting
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetAllowlistSale { open: true },
+        )
+        .unwrap();
+
+    let random = mock_info("random", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random.clone(),
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnAllowlist {});
+
     // random can't mint if not allowlisted
     let random = mock_info("random", &[]);
     let err = contract
@@ -407,7 +432,6 @@ fn mint_allowlist() {
     assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
 
     // Admin can add to allowlist
-    let admin = mock_info(ADMIN, &[]);
     let _ = contract
         .execute(
             deps.as_mut(),
@@ -469,6 +493,17 @@ fn mint_public() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
 
+    // Open public minting
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
+
     // random can't mint over the max limit
     let random = mock_info("random", &[]);
     let err = contract
@@ -519,7 +554,6 @@ fn mint_public() {
     assert_eq!(5, count.count);
 
     // can't mint past collection size
-    let admin = mock_info(ADMIN, &[]);
     let mint_msg = ExecuteMsg::MintTeam {
         quantity: 95,
         extension: None,
@@ -690,6 +724,16 @@ fn transferring_nft() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
 
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
+
     // Mint a token
     let funds = coins(100000, "usei");
     let minter = mock_info("minter", &funds);
@@ -738,6 +782,16 @@ fn transferring_nft() {
 fn sending_nft() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
+
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
 
     // Mint a token
     let funds = coins(100000, "usei");
@@ -803,6 +857,16 @@ fn sending_nft() {
 fn approving_revoking() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
+
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
 
     // Mint a token
     let funds = coins(100000, "usei");
@@ -946,6 +1010,16 @@ fn approving_revoking() {
 fn approving_all_revoking_all() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
+
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
 
     // Mint a couple tokens (from the same owner)
     let funds = coins(200000, "usei");
@@ -1349,6 +1423,16 @@ fn withdraw_funds() {
 fn query_tokens_by_owner() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
+
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
 
     // Mint a couple tokens (from the same owner)
     let minter = "minter";
