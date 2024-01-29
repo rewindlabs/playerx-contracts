@@ -5,4 +5,4 @@ Welcome to the [PlayerX](https://www.playerx.quest/) NFT Contracts repository. T
 ## Contracts
 
 - [CW721 Base Contract](contracts/cw721-base/)
-- [CW2981 Leveling Contract](contracts/cw721-base/)
+- [CW2981 Leveling Contract](contracts/cw2981-leveling/)
