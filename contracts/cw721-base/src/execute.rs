@@ -36,7 +36,8 @@ where
         // Set owner and withdraw address as the sender instantiating the contract
         let owner = info.sender;
         cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner.as_ref()))?;
-        self.set_withdraw_address(deps.storage, deps.api, &owner, owner.to_string())?;
+        self.withdraw_address
+            .save(deps.storage, &owner.to_string())?;
 
         // Set base token uri
         self.base_token_uri
@@ -158,6 +159,10 @@ where
     ) -> Result<Response<C>, ContractError> {
         cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
+        if quantity == 0 {
+            return Err(ContractError::InvalidQuantity {});
+        }
+
         // Make sure number of tokens doesn't exceed collection size
         let collection_size = self.collection_size.load(deps.storage)?;
         let token_count = self.token_count(deps.storage)?;
@@ -204,6 +209,10 @@ where
             return Err(ContractError::AllowlistSaleClosed {});
         }
 
+        if quantity == 0 {
+            return Err(ContractError::InvalidQuantity {});
+        }
+
         // Verify if the sender is on the allowlist
         let is_allowed = self
             .allowlist
@@ -223,6 +232,17 @@ where
         let token_count = self.token_count(deps.storage)?;
         if token_count + quantity > collection_size {
             return Err(ContractError::MaxSupplyReached {});
+        }
+
+        // Make sure enough funds are sent
+        let total_price = sale_config.allowlist_price.multiply_ratio(quantity, 1u64);
+        let sent_amount = info
+            .funds
+            .iter()
+            .find(|coin| coin.denom == "usei")
+            .map_or(Uint128::zero(), |coin| coin.amount);
+        if sent_amount < total_price {
+            return Err(ContractError::InsufficientFunds {});
         }
 
         // Create tokens based on quantity
@@ -262,6 +282,10 @@ where
         // Check that public mint is open
         if !sale_config.public_sale_open {
             return Err(ContractError::PublicSaleClosed {});
+        }
+
+        if quantity == 0 {
+            return Err(ContractError::InvalidQuantity {});
         }
 
         // Make sure quantity doesn't exceed max

@@ -61,7 +61,7 @@ pub enum ExecuteMsg<T, E> {
     /// Mint for public
     MintPublic { quantity: u64, extension: T },
 
-    /// This mint is disabled, do not use
+    /// DO NOT USE: This mint is disabled
     Mint {
         /// Unique ID of the NFT
         token_id: String,

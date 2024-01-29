@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("No withdraw address set")]
     NoWithdrawAddress {},
 
+    #[error("Invalid quantity")]
+    InvalidQuantity {},
+
     #[error("Standard minting is disabled")]
     MintDisabled,
 

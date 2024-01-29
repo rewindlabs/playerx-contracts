@@ -311,6 +311,21 @@ fn mint_team() {
         .unwrap_err();
     assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
 
+    // can't mint 0
+    let allowed = mock_info(ADMIN, &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            allowed.clone(),
+            ExecuteMsg::MintTeam {
+                quantity: 0,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::InvalidQuantity {});
+
     // admin can mint
     let allowed = mock_info(ADMIN, &[]);
     let _ = contract
@@ -457,11 +472,28 @@ fn mint_allowlist() {
         .unwrap_err();
     assert_eq!(err, ContractError::MaxMintReached {});
 
+    // Cannot mint without funds
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random,
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::InsufficientFunds {});
+
+    // Successful mint
+    let funds = coins(100000, "usei");
+    let random_with_funds = mock_info("random", &funds);
     let _ = contract
         .execute(
             deps.as_mut(),
             mock_env(),
-            random.clone(),
+            random_with_funds.clone(),
             ExecuteMsg::MintAllowlist {
                 quantity: 1,
                 extension: None,
@@ -478,7 +510,7 @@ fn mint_allowlist() {
         .execute(
             deps.as_mut(),
             mock_env(),
-            random.clone(),
+            random_with_funds,
             ExecuteMsg::MintAllowlist {
                 quantity: 1,
                 extension: None,
