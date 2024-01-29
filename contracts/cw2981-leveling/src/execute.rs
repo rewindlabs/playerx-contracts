@@ -174,3 +174,31 @@ pub fn grant_bonus_experience(
         .add_attribute("token_ids", token_ids.join(","))
         .add_attribute("experience", experience.to_string()))
 }
+
+pub fn toggle_leveling_off(
+    deps: DepsMut,
+    current_block_seconds: u64,
+    token_id: String,
+) -> Result<(), ContractError> {
+    let leveling_config = LEVELING_CONFIG.load(deps.storage)?;
+    let mut token_level =
+        TOKEN_LEVELS
+            .may_load(deps.storage, &token_id)?
+            .unwrap_or(TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 0,
+            });
+    if token_level.leveling {
+        // Turn off leveling
+        token_level.leveling = false;
+        calculate_and_cap_experience(
+            &mut token_level,
+            current_block_seconds,
+            leveling_config.max_experience,
+        );
+        token_level.leveling_start_timestamp = 0;
+    }
+    TOKEN_LEVELS.save(deps.storage, &token_id, &token_level)?;
+    Ok(())
+}

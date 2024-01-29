@@ -24,7 +24,8 @@ pub type QueryMsg = cw721_base::QueryMsg<Cw2981LevelingQueryMsg>;
 #[cfg(not(feature = "library"))]
 pub mod entry {
     use self::execute::{
-        grant_bonus_experience, toggle_leveling, update_leveling_config, update_royalty_config,
+        grant_bonus_experience, toggle_leveling, toggle_leveling_off, update_leveling_config,
+        update_royalty_config,
     };
     use self::msg::{LevelingConfigResponse, RoyaltyConfigResponse};
     use self::query::{
@@ -80,7 +81,7 @@ pub mod entry {
 
     #[entry_point]
     pub fn execute(
-        deps: DepsMut,
+        mut deps: DepsMut,
         env: Env,
         info: MessageInfo,
         msg: ExecuteMsg,
@@ -103,6 +104,44 @@ pub mod entry {
                     experience,
                 } => grant_bonus_experience(deps, info, token_ids, experience),
             },
+            ExecuteMsg::TransferNft {
+                recipient,
+                token_id,
+            } => {
+                let response = Cw2981LevelingContract::default().execute(
+                    deps.branch(),
+                    env.clone(),
+                    info.clone(),
+                    ExecuteMsg::TransferNft {
+                        recipient,
+                        token_id: token_id.clone(),
+                    },
+                );
+                if response.is_ok() {
+                    toggle_leveling_off(deps, env.block.time.seconds(), token_id.clone())?;
+                }
+                response.map_err(Into::into)
+            }
+            ExecuteMsg::SendNft {
+                contract,
+                token_id,
+                msg: send_msg,
+            } => {
+                let response = Cw2981LevelingContract::default().execute(
+                    deps.branch(),
+                    env.clone(),
+                    info.clone(),
+                    ExecuteMsg::SendNft {
+                        contract,
+                        token_id: token_id.clone(),
+                        msg: send_msg,
+                    },
+                );
+                if response.is_ok() {
+                    toggle_leveling_off(deps.branch(), env.block.time.seconds(), token_id.clone())?;
+                }
+                response.map_err(Into::into)
+            }
             _ => Cw2981LevelingContract::default()
                 .execute(deps, env, info, msg)
                 .map_err(Into::into),

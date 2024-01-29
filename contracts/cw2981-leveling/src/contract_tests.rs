@@ -8,11 +8,12 @@ mod tests {
     use crate::query::{check_royalties, query_royalties_info};
     use crate::{entry, Cw2981LevelingContract};
 
-    use cosmwasm_std::{coins, from_json, Addr, Empty, StdError, Uint128};
+    use cosmwasm_std::{coins, from_json, to_json_binary, Addr, Empty, StdError, Uint128};
 
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cw721::OwnerOfResponse;
     use cw721_base::msg::{QueryMsg, SaleConfigResponse};
-    use cw721_base::ExecuteMsg;
+    use cw721_base::{ContractError as BaseContractError, ExecuteMsg};
     use cw_ownable::OwnershipError;
 
     const CREATOR: &str = "creator";
@@ -206,6 +207,15 @@ mod tests {
             allowlist_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
+
+        // Open public mint
+        entry::execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::SetPublicSale { open: true },
+        )
+        .unwrap();
 
         // Mint a token
         let exec_msg = ExecuteMsg::MintPublic {
@@ -619,6 +629,256 @@ mod tests {
                 leveling: false,
                 leveling_start_timestamp: 0,
                 total_exp: 100
+            }
+        );
+    }
+
+    #[test]
+    fn transferring_nft() {
+        let mut deps = mock_dependencies();
+        let info = mock_info(CREATOR, &[]);
+        let init_msg = InstantiateMsg {
+            name: "PlayerX".to_string(),
+            symbol: "PX".to_string(),
+            base_token_uri: "uri".to_string(),
+            royalty_payment_address: Addr::unchecked("address"),
+            royalty_percentage: 4,
+            collection_size: 10,
+            max_per_public: 5,
+            max_per_allowlist: 1,
+            public_price: Uint128::from(1000000u64),
+            allowlist_price: Uint128::from(1000000u64),
+        };
+        entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
+
+        // Mint a token
+        let mint_msg = ExecuteMsg::MintTeam {
+            quantity: 1,
+            extension: Empty {},
+        };
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), mint_msg).unwrap();
+
+        // Turn on leveling
+        entry::execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::UpdateLevelingConfig {
+                    leveling_open: true,
+                    max_experience: 100,
+                },
+            },
+        )
+        .unwrap();
+
+        // Toggle leveling on
+        let extension = Cw2981LevelingExecuteMsg::ToggleLeveling {
+            token_id: "0".to_string(),
+        };
+        let env = mock_env();
+        entry::execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: extension.clone(),
+            },
+        )
+        .unwrap();
+
+        // query and verify leveling status
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::TokenLevel {
+                token_id: "0".to_string(),
+            },
+        };
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: true,
+                leveling_start_timestamp: env.block.time.seconds(),
+                total_exp: 0
+            }
+        );
+
+        // random cannot transfer
+        let random = mock_info("random", &[]);
+        let transfer_msg = ExecuteMsg::TransferNft {
+            recipient: String::from("random"),
+            token_id: "0".to_string(),
+        };
+        let err =
+            entry::execute(deps.as_mut(), mock_env(), random, transfer_msg.clone()).unwrap_err();
+        assert_eq!(
+            err,
+            ContractError::Base(BaseContractError::Ownership(OwnershipError::NotOwner))
+        );
+
+        // owner transfers
+        let mut env = mock_env();
+        env.block.time = env.block.time.plus_seconds(20);
+        entry::execute(deps.as_mut(), env, info, transfer_msg).unwrap();
+
+        // Random now owns the nft
+        let owner_res: OwnerOfResponse = from_json(
+            entry::query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::OwnerOf {
+                    token_id: "0".to_string(),
+                    include_expired: Some(true),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            owner_res,
+            OwnerOfResponse {
+                approvals: vec![],
+                owner: "random".to_string()
+            }
+        );
+
+        // Verify leveling was turned off
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 20
+            }
+        );
+    }
+
+    #[test]
+    fn sending_nft() {
+        let mut deps = mock_dependencies();
+        let info = mock_info(CREATOR, &[]);
+        let init_msg = InstantiateMsg {
+            name: "PlayerX".to_string(),
+            symbol: "PX".to_string(),
+            base_token_uri: "uri".to_string(),
+            royalty_payment_address: Addr::unchecked("address"),
+            royalty_percentage: 4,
+            collection_size: 10,
+            max_per_public: 5,
+            max_per_allowlist: 1,
+            public_price: Uint128::from(1000000u64),
+            allowlist_price: Uint128::from(1000000u64),
+        };
+        entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
+
+        // Mint a token
+        let mint_msg = ExecuteMsg::MintTeam {
+            quantity: 1,
+            extension: Empty {},
+        };
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), mint_msg).unwrap();
+
+        // Turn on leveling
+        entry::execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::UpdateLevelingConfig {
+                    leveling_open: true,
+                    max_experience: 100,
+                },
+            },
+        )
+        .unwrap();
+
+        // Toggle leveling on
+        let extension = Cw2981LevelingExecuteMsg::ToggleLeveling {
+            token_id: "0".to_string(),
+        };
+        let env = mock_env();
+        entry::execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: extension.clone(),
+            },
+        )
+        .unwrap();
+
+        // query and verify leveling status
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::TokenLevel {
+                token_id: "0".to_string(),
+            },
+        };
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: true,
+                leveling_start_timestamp: env.block.time.seconds(),
+                total_exp: 0
+            }
+        );
+
+        // Sending the nft
+        let msg = to_json_binary("msg").unwrap();
+        let target = String::from("another_contract");
+        let send_msg = ExecuteMsg::SendNft {
+            contract: target.clone(),
+            token_id: "0".to_string(),
+            msg: msg.clone(),
+        };
+
+        // random cannot send
+        let random = mock_info("random", &[]);
+        let err = entry::execute(deps.as_mut(), mock_env(), random, send_msg.clone()).unwrap_err();
+        assert_eq!(
+            err,
+            ContractError::Base(BaseContractError::Ownership(OwnershipError::NotOwner))
+        );
+
+        // owner sends
+        let mut env = mock_env();
+        env.block.time = env.block.time.plus_seconds(20);
+        entry::execute(deps.as_mut(), env, info, send_msg).unwrap();
+
+        // Random now owns the nft
+        let owner_res: OwnerOfResponse = from_json(
+            entry::query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::OwnerOf {
+                    token_id: "0".to_string(),
+                    include_expired: Some(true),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            owner_res,
+            OwnerOfResponse {
+                approvals: vec![],
+                owner: "another_contract".to_string()
+            }
+        );
+
+        // Verify leveling was turned off
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 20
             }
         );
     }
