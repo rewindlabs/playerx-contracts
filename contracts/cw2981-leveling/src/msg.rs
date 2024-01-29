@@ -35,6 +35,11 @@ pub enum Cw2981LevelingExecuteMsg {
     },
     /// Toggles leveling for the token id
     ToggleLeveling { token_id: String },
+    /// Grants bonus experience to tokens
+    GrantBonusExperience {
+        token_ids: Vec<String>,
+        experience: u64,
+    },
 }
 
 impl CustomMsg for Cw2981LevelingExecuteMsg {}

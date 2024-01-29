@@ -517,4 +517,109 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn grant_bonus_experience() {
+        let mut deps = mock_dependencies();
+        let info = mock_info(CREATOR, &[]);
+        let init_msg = InstantiateMsg {
+            name: "PlayerX".to_string(),
+            symbol: "PX".to_string(),
+            base_token_uri: "uri".to_string(),
+            royalty_payment_address: Addr::unchecked("address"),
+            royalty_percentage: 4,
+            collection_size: 10,
+            max_per_public: 5,
+            max_per_allowlist: 1,
+            public_price: Uint128::from(1000000u64),
+            allowlist_price: Uint128::from(1000000u64),
+        };
+        entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
+
+        // Mint tokens
+        let mint_msg = ExecuteMsg::MintTeam {
+            quantity: 2,
+            extension: Empty {},
+        };
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), mint_msg).unwrap();
+
+        // Turn on leveling
+        entry::execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::UpdateLevelingConfig {
+                    leveling_open: true,
+                    max_experience: 100,
+                },
+            },
+        )
+        .unwrap();
+
+        // Random doesn't have access
+        let msg = ExecuteMsg::Extension {
+            msg: Cw2981LevelingExecuteMsg::GrantBonusExperience {
+                token_ids: vec!["0".to_string(), "1".to_string()],
+                experience: 10,
+            },
+        };
+        let random = mock_info("random", &[]);
+        let err = entry::execute(deps.as_mut(), mock_env(), random, msg.clone()).unwrap_err();
+        assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
+
+        // Grant bonus experience to the tokens
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::TokenLevel {
+                token_id: "0".to_string(),
+            },
+        };
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 10
+            }
+        );
+
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::TokenLevel {
+                token_id: "1".to_string(),
+            },
+        };
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 10
+            }
+        );
+
+        // grant more than max
+        let msg = ExecuteMsg::Extension {
+            msg: Cw2981LevelingExecuteMsg::GrantBonusExperience {
+                token_ids: vec!["1".to_string()],
+                experience: 150,
+            },
+        };
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        let query_res: TokenLevelResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            TokenLevelResponse {
+                leveling: false,
+                leveling_start_timestamp: 0,
+                total_exp: 100
+            }
+        );
+    }
 }

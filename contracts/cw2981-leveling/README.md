@@ -4,4 +4,4 @@ This contract builds on top of the [CW-2981 royalties contract](https://github.c
 
 ## Leveling
 
-The CW2981 Leveling contract introduces a unique leveling system for NFTs. This staking system allows each token to gain experience (EXP) and "level up" over time. NFTs can accumulate experience points both passively over time and actively by gaining bonus EXP through participation in events.
+The CW2981 Leveling contract introduces a unique leveling system for NFTs. This staking system allows each token to gain experience (EXP) and level up over time. NFTs can accumulate experience points both passively over time and actively by gaining bonus EXP through participation in events.

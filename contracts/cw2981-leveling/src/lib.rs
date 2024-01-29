@@ -23,7 +23,9 @@ pub type QueryMsg = cw721_base::QueryMsg<Cw2981LevelingQueryMsg>;
 
 #[cfg(not(feature = "library"))]
 pub mod entry {
-    use self::execute::{toggle_leveling, update_leveling_config, update_royalty_config};
+    use self::execute::{
+        grant_bonus_experience, toggle_leveling, update_leveling_config, update_royalty_config,
+    };
     use self::msg::{LevelingConfigResponse, RoyaltyConfigResponse};
     use self::query::{
         check_royalties, query_leveling_config, query_royalties_info, query_royalty_config,
@@ -96,6 +98,10 @@ pub mod entry {
                 Cw2981LevelingExecuteMsg::ToggleLeveling { token_id } => {
                     toggle_leveling(deps, env, info, token_id)
                 }
+                Cw2981LevelingExecuteMsg::GrantBonusExperience {
+                    token_ids,
+                    experience,
+                } => grant_bonus_experience(deps, info, token_ids, experience),
             },
             _ => Cw2981LevelingContract::default()
                 .execute(deps, env, info, msg)

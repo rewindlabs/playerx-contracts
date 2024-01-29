@@ -143,3 +143,34 @@ pub fn toggle_leveling(
         .add_attribute("token_id", token_id)
         .add_attribute("leveling_status", token_level.leveling.to_string()))
 }
+
+pub fn grant_bonus_experience(
+    deps: DepsMut,
+    info: MessageInfo,
+    token_ids: Vec<String>,
+    experience: u64,
+) -> Result<Response, ContractError> {
+    cw_ownable::assert_owner(deps.storage, &info.sender)?;
+    let leveling_config = LEVELING_CONFIG.load(deps.storage)?;
+
+    for token_id in token_ids.clone() {
+        let mut token_level =
+            TOKEN_LEVELS
+                .may_load(deps.storage, &token_id)?
+                .unwrap_or(TokenLevelResponse {
+                    leveling: false,
+                    leveling_start_timestamp: 0,
+                    total_exp: 0,
+                });
+        token_level.total_exp += experience;
+        if token_level.total_exp > leveling_config.max_experience {
+            token_level.total_exp = leveling_config.max_experience;
+        }
+        TOKEN_LEVELS.save(deps.storage, &token_id, &token_level)?;
+    }
+
+    Ok(Response::new()
+        .add_attribute("action", "grant_bonus_experience")
+        .add_attribute("token_ids", token_ids.join(","))
+        .add_attribute("experience", experience.to_string()))
+}
