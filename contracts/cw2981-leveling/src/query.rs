@@ -1,10 +1,14 @@
 use crate::msg::{
-    CheckRoyaltiesResponse, LevelingConfigResponse, RoyaltiesInfoResponse, RoyaltyConfigResponse,
-    TokenLevelResponse,
+    AllTokenLevelsResponse, CheckRoyaltiesResponse, LevelingConfigResponse, RoyaltiesInfoResponse,
+    RoyaltyConfigResponse, TokenLevelResponse,
 };
 use crate::state::{LEVELING_CONFIG, ROYALTY_CONFIG, TOKEN_LEVELS};
 use crate::Cw2981LevelingContract;
-use cosmwasm_std::{Decimal, Deps, StdResult, Uint128};
+use cosmwasm_std::{Decimal, Deps, Order, StdResult, Uint128};
+use cw_storage_plus::Bound;
+
+const DEFAULT_LIMIT: u32 = 10;
+const MAX_LIMIT: u32 = 1000;
 
 pub fn query_royalty_config(deps: Deps) -> StdResult<RoyaltyConfigResponse> {
     let royalty_config = ROYALTY_CONFIG.load(deps.storage)?;
@@ -62,4 +66,26 @@ pub fn query_token_level(deps: Deps, token_id: String) -> StdResult<TokenLevelRe
                 total_exp: 0,
             });
     Ok(token_level)
+}
+
+pub fn query_all_token_levels(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<AllTokenLevelsResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start_bound = start_after.as_deref().map(Bound::exclusive);
+
+    let token_levels: StdResult<Vec<(String, TokenLevelResponse)>> = TOKEN_LEVELS
+        .range(deps.storage, start_bound, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            let (key, token_level) = item?;
+            Ok((key, token_level))
+        })
+        .collect();
+
+    Ok(AllTokenLevelsResponse {
+        token_levels: token_levels?,
+    })
 }

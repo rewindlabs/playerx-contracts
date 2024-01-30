@@ -76,6 +76,12 @@ pub enum Cw2981LevelingQueryMsg {
     /// Returns token level info
     #[returns(TokenLevelResponse)]
     TokenLevel { token_id: String },
+    /// Returns token levels for all tokens paginated
+    #[returns(AllTokenLevelsResponse)]
+    AllTokenLevels {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
 impl Default for Cw2981LevelingQueryMsg {
@@ -118,4 +124,9 @@ pub struct TokenLevelResponse {
     pub leveling: bool,
     pub leveling_start_timestamp: u64,
     pub total_exp: u64,
+}
+
+#[cw_serde]
+pub struct AllTokenLevelsResponse {
+    pub token_levels: Vec<(String, TokenLevelResponse)>,
 }

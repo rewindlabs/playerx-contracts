@@ -2,8 +2,9 @@
 mod tests {
     use crate::error::ContractError;
     use crate::msg::{
-        CheckRoyaltiesResponse, Cw2981LevelingExecuteMsg, Cw2981LevelingQueryMsg, InstantiateMsg,
-        LevelingConfigResponse, RoyaltiesInfoResponse, TokenLevelResponse,
+        AllTokenLevelsResponse, CheckRoyaltiesResponse, Cw2981LevelingExecuteMsg,
+        Cw2981LevelingQueryMsg, InstantiateMsg, LevelingConfigResponse, RoyaltiesInfoResponse,
+        TokenLevelResponse,
     };
     use crate::query::{check_royalties, query_royalties_info};
     use crate::{entry, Cw2981LevelingContract};
@@ -368,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn toggle_leveling_status() {
+    fn toggle_leveling() {
         let mut deps = mock_dependencies();
         let info = mock_info(CREATOR, &[]);
         let init_msg = InstantiateMsg {
@@ -879,6 +880,150 @@ mod tests {
                 leveling: false,
                 leveling_start_timestamp: 0,
                 total_exp: 20
+            }
+        );
+    }
+
+    #[test]
+    fn query_all_token_levels() {
+        let mut deps = mock_dependencies();
+        let info = mock_info(CREATOR, &[]);
+        let init_msg = InstantiateMsg {
+            name: "PlayerX".to_string(),
+            symbol: "PX".to_string(),
+            base_token_uri: "uri".to_string(),
+            royalty_payment_address: Addr::unchecked("address"),
+            royalty_percentage: 4,
+            collection_size: 10,
+            max_per_public: 5,
+            max_per_allowlist: 1,
+            public_price: Uint128::from(1000000u64),
+            allowlist_price: Uint128::from(1000000u64),
+        };
+        entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
+
+        // Mint a few tokens
+        let mint_msg = ExecuteMsg::MintTeam {
+            quantity: 5,
+            extension: Empty {},
+        };
+        entry::execute(deps.as_mut(), mock_env(), info.clone(), mint_msg).unwrap();
+
+        // base case: no tokens leveling
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::AllTokenLevels {
+                start_after: None,
+                limit: None,
+            },
+        };
+        let query_res: AllTokenLevelsResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg.clone()).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            AllTokenLevelsResponse {
+                token_levels: vec![]
+            }
+        );
+
+        // Turn on leveling
+        entry::execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::UpdateLevelingConfig {
+                    leveling_open: true,
+                    max_experience: 100,
+                },
+            },
+        )
+        .unwrap();
+
+        // Toggle leveling for a few tokens
+        let env = mock_env();
+        entry::execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::ToggleLeveling {
+                    token_id: "0".to_string(),
+                },
+            },
+        )
+        .unwrap();
+        entry::execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::ToggleLeveling {
+                    token_id: "1".to_string(),
+                },
+            },
+        )
+        .unwrap();
+        entry::execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            ExecuteMsg::Extension {
+                msg: Cw2981LevelingExecuteMsg::ToggleLeveling {
+                    token_id: "2".to_string(),
+                },
+            },
+        )
+        .unwrap();
+
+        // query all tokens
+        let query_res: AllTokenLevelsResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        let leveling_tokens = TokenLevelResponse {
+            leveling: true,
+            leveling_start_timestamp: env.block.time.seconds(),
+            total_exp: 0,
+        };
+        assert_eq!(
+            query_res,
+            AllTokenLevelsResponse {
+                token_levels: vec![
+                    ("0".to_string(), leveling_tokens.clone()),
+                    ("1".to_string(), leveling_tokens.clone()),
+                    ("2".to_string(), leveling_tokens.clone()),
+                ]
+            }
+        );
+
+        // with pagination
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::AllTokenLevels {
+                start_after: None,
+                limit: Some(1),
+            },
+        };
+        let query_res: AllTokenLevelsResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            AllTokenLevelsResponse {
+                token_levels: vec![("0".to_string(), leveling_tokens.clone())]
+            }
+        );
+        let query_msg = QueryMsg::Extension {
+            msg: Cw2981LevelingQueryMsg::AllTokenLevels {
+                start_after: Some("0".to_string()),
+                limit: Some(5),
+            },
+        };
+        let query_res: AllTokenLevelsResponse =
+            from_json(entry::query(deps.as_ref(), mock_env(), query_msg).unwrap()).unwrap();
+        assert_eq!(
+            query_res,
+            AllTokenLevelsResponse {
+                token_levels: vec![
+                    ("1".to_string(), leveling_tokens.clone()),
+                    ("2".to_string(), leveling_tokens.clone())
+                ]
             }
         );
     }

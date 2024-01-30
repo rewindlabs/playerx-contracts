@@ -29,8 +29,8 @@ pub mod entry {
     };
     use self::msg::{LevelingConfigResponse, RoyaltyConfigResponse};
     use self::query::{
-        check_royalties, query_leveling_config, query_royalties_info, query_royalty_config,
-        query_token_level,
+        check_royalties, query_all_token_levels, query_leveling_config, query_royalties_info,
+        query_royalty_config, query_token_level,
     };
     use self::state::{LEVELING_CONFIG, ROYALTY_CONFIG};
 
@@ -167,6 +167,9 @@ pub mod entry {
                 }
                 Cw2981LevelingQueryMsg::TokenLevel { token_id } => {
                     to_json_binary(&query_token_level(deps, token_id)?)
+                }
+                Cw2981LevelingQueryMsg::AllTokenLevels { start_after, limit } => {
+                    to_json_binary(&query_all_token_levels(deps, start_after, limit)?)
                 }
             },
             _ => Cw2981LevelingContract::default().query(deps, env, msg),
