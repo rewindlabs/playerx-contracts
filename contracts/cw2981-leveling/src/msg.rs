@@ -15,8 +15,10 @@ pub struct InstantiateMsg {
     pub royalty_percentage: u64,
     pub royalty_payment_address: Addr,
     // Sale config
+    pub og_price: Uint128,
     pub allowlist_price: Uint128,
     pub public_price: Uint128,
+    pub max_per_og: u64,
     pub max_per_allowlist: u64,
     pub max_per_public: u64,
 }

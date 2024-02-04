@@ -71,8 +71,10 @@ pub mod entry {
             symbol: msg.symbol,
             base_token_uri: msg.base_token_uri,
             collection_size: msg.collection_size,
+            max_per_og: msg.max_per_og,
             max_per_allowlist: msg.max_per_allowlist,
             max_per_public: msg.max_per_public,
+            og_price: msg.og_price,
             allowlist_price: msg.allowlist_price,
             public_price: msg.public_price,
         };

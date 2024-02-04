@@ -36,8 +36,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -50,10 +52,13 @@ mod tests {
             SaleConfigResponse {
                 max_per_public: 5,
                 max_per_allowlist: 1,
+                max_per_og: 1,
                 public_price: Uint128::from(1000000u64),
                 allowlist_price: Uint128::from(1000000u64),
+                og_price: Uint128::from(1000000u64),
                 public_sale_open: false,
                 allowlist_sale_open: false,
+                og_sale_open: false,
             }
         );
     }
@@ -73,8 +78,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         let err =
             entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap_err();
@@ -96,8 +103,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -130,8 +139,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -204,8 +215,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -289,8 +302,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -381,8 +396,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -542,8 +559,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -647,8 +666,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -770,8 +791,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
@@ -897,8 +920,10 @@ mod tests {
             collection_size: 10,
             max_per_public: 5,
             max_per_allowlist: 1,
+            max_per_og: 1,
             public_price: Uint128::from(1000000u64),
             allowlist_price: Uint128::from(1000000u64),
+            og_price: Uint128::from(1000000u64),
         };
         entry::instantiate(deps.as_mut(), mock_env(), info.clone(), init_msg).unwrap();
 
