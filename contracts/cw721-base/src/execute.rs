@@ -313,12 +313,16 @@ where
             return Err(ContractError::InvalidQuantity {});
         }
 
-        // Verify if the sender is on the allowlist
+        // Verify if the sender is an og or on allowlist
+        let is_og = self
+            .og_list
+            .may_load(deps.storage, &info.sender)?
+            .unwrap_or(false);
         let is_allowed = self
             .allowlist
             .may_load(deps.storage, &info.sender)?
             .unwrap_or(false);
-        if !is_allowed {
+        if !is_og && !is_allowed {
             return Err(ContractError::NotOnAllowlist {});
         }
 
@@ -362,8 +366,12 @@ where
 
         // Update the total minted count
         self.increment_tokens(deps.storage, quantity)?;
-        // Remove from allowlist
-        self.allowlist.remove(deps.storage, &info.sender);
+        // Remove from oglist or allowlist
+        if is_og {
+            self.og_list.remove(deps.storage, &info.sender)
+        } else {
+            self.allowlist.remove(deps.storage, &info.sender);
+        }
 
         Ok(Response::new()
             .add_attribute("action", "mint_allowlist")
@@ -516,6 +524,7 @@ where
             .add_attribute("base_token_uri", base_token_uri))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn set_sale_config(
         &self,
         deps: DepsMut,

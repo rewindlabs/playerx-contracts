@@ -11,8 +11,10 @@
       "base_token_uri",
       "collection_size",
       "max_per_allowlist",
+      "max_per_og",
       "max_per_public",
       "name",
+      "og_price",
       "public_price",
       "symbol"
     ],
@@ -33,6 +35,11 @@
         "format": "uint64",
         "minimum": 0.0
       },
+      "max_per_og": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0.0
+      },
       "max_per_public": {
         "type": "integer",
         "format": "uint64",
@@ -41,6 +48,9 @@
       "name": {
         "description": "Name of the NFT contract",
         "type": "string"
+      },
+      "og_price": {
+        "$ref": "#/definitions/Uint128"
       },
       "public_price": {
         "$ref": "#/definitions/Uint128"
@@ -264,7 +274,35 @@
         "additionalProperties": false
       },
       {
-        "description": "Mint for allowlisted addresses",
+        "description": "Mint for og",
+        "type": "object",
+        "required": [
+          "mint_og"
+        ],
+        "properties": {
+          "mint_og": {
+            "type": "object",
+            "required": [
+              "extension",
+              "quantity"
+            ],
+            "properties": {
+              "extension": {
+                "$ref": "#/definitions/Empty"
+              },
+              "quantity": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Mint for allowlisted addresses NOTE: OG can also mint during this phase",
         "type": "object",
         "required": [
           "mint_allowlist"
@@ -320,7 +358,7 @@
         "additionalProperties": false
       },
       {
-        "description": "This mint is disabled, do not use",
+        "description": "DO NOT USE: This mint is disabled",
         "type": "object",
         "required": [
           "mint"
@@ -498,7 +536,9 @@
             "required": [
               "allowlist_price",
               "max_per_allowlist",
+              "max_per_og",
               "max_per_public",
+              "og_price",
               "public_price"
             ],
             "properties": {
@@ -510,10 +550,18 @@
                 "format": "uint64",
                 "minimum": 0.0
               },
+              "max_per_og": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
               "max_per_public": {
                 "type": "integer",
                 "format": "uint64",
                 "minimum": 0.0
+              },
+              "og_price": {
+                "$ref": "#/definitions/Uint128"
               },
               "public_price": {
                 "$ref": "#/definitions/Uint128"
@@ -528,10 +576,85 @@
         "description": "Add addresses to allowlist",
         "type": "object",
         "required": [
-          "seed_allowlist"
+          "add_to_allowlist"
         ],
         "properties": {
-          "seed_allowlist": {
+          "add_to_allowlist": {
+            "type": "object",
+            "required": [
+              "addresses"
+            ],
+            "properties": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Remove addresses from allowlist",
+        "type": "object",
+        "required": [
+          "remove_from_allowlist"
+        ],
+        "properties": {
+          "remove_from_allowlist": {
+            "type": "object",
+            "required": [
+              "addresses"
+            ],
+            "properties": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Add addresses to og list",
+        "type": "object",
+        "required": [
+          "add_to_og_list"
+        ],
+        "properties": {
+          "add_to_og_list": {
+            "type": "object",
+            "required": [
+              "addresses"
+            ],
+            "properties": {
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Remove addresses from allowlist",
+        "type": "object",
+        "required": [
+          "remove_from_og_list"
+        ],
+        "properties": {
+          "remove_from_og_list": {
             "type": "object",
             "required": [
               "addresses"
@@ -572,6 +695,28 @@
         "additionalProperties": false
       },
       {
+        "description": "Sets state of allowlist sale",
+        "type": "object",
+        "required": [
+          "set_og_sale"
+        ],
+        "properties": {
+          "set_og_sale": {
+            "type": "object",
+            "required": [
+              "open"
+            ],
+            "properties": {
+              "open": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
         "description": "Sets state of public sale",
         "type": "object",
         "required": [
@@ -586,6 +731,30 @@
             "properties": {
               "open": {
                 "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Sets collection size",
+        "type": "object",
+        "required": [
+          "set_collection_size"
+        ],
+        "properties": {
+          "set_collection_size": {
+            "type": "object",
+            "required": [
+              "collection_size"
+            ],
+            "properties": {
+              "collection_size": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
               }
             },
             "additionalProperties": false
@@ -2073,7 +2242,10 @@
         "allowlist_price",
         "allowlist_sale_open",
         "max_per_allowlist",
+        "max_per_og",
         "max_per_public",
+        "og_price",
+        "og_sale_open",
         "public_price",
         "public_sale_open"
       ],
@@ -2089,10 +2261,21 @@
           "format": "uint64",
           "minimum": 0.0
         },
+        "max_per_og": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
         "max_per_public": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "og_price": {
+          "$ref": "#/definitions/Uint128"
+        },
+        "og_sale_open": {
+          "type": "boolean"
         },
         "public_price": {
           "$ref": "#/definitions/Uint128"

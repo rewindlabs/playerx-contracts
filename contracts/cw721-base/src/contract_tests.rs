@@ -700,7 +700,11 @@ fn mint_allowlist() {
             mock_env(),
             admin.clone(),
             ExecuteMsg::AddToAllowlist {
-                addresses: vec!["random".to_string(), "user".to_string()],
+                addresses: vec![
+                    "random".to_string(),
+                    "user".to_string(),
+                    "user_2".to_string(),
+                ],
             },
         )
         .unwrap();
@@ -771,7 +775,7 @@ fn mint_allowlist() {
         .execute(
             deps.as_mut(),
             mock_env(),
-            admin,
+            admin.clone(),
             ExecuteMsg::RemoveFromAllowlist {
                 addresses: vec!["user".to_string()],
             },
@@ -785,6 +789,102 @@ fn mint_allowlist() {
             deps.as_mut(),
             mock_env(),
             user,
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnAllowlist {});
+
+    // User can't mint if they're not on og list
+    let og_user = mock_info("og_user", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            og_user.clone(),
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnAllowlist {});
+
+    // If user is on og list, then they can mint
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::AddToOgList {
+                addresses: vec!["og_user".to_string(), "user_2".to_string()],
+            },
+        )
+        .unwrap();
+
+    let funds = coins(100000, "usei");
+    let og_with_funds = mock_info("og_user", &funds);
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            og_with_funds.clone(),
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap();
+
+    // Og can't mint again
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            og_with_funds,
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnAllowlist {});
+
+    // User on both og list and allowlist can mint twice
+    // Once for being on og list and once for being on allowlist
+    let funds = coins(100000, "usei");
+    let user_2_with_funds = mock_info("user_2", &funds);
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            user_2_with_funds.clone(),
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap();
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            user_2_with_funds.clone(),
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap();
+
+    // Fails on third attempt
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            user_2_with_funds,
             ExecuteMsg::MintAllowlist {
                 quantity: 1,
                 extension: None,

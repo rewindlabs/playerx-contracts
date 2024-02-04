@@ -61,6 +61,7 @@ pub enum ExecuteMsg<T, E> {
     MintOg { quantity: u64, extension: T },
 
     /// Mint for allowlisted addresses
+    /// NOTE: OG can also mint during this phase
     MintAllowlist { quantity: u64, extension: T },
 
     /// Mint for public
