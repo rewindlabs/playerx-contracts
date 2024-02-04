@@ -332,7 +332,7 @@ fn update_base_token_uri() {
 }
 
 #[test]
-fn validate_collection_size() {
+fn update_collection_size() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
 
@@ -347,6 +347,65 @@ fn validate_collection_size() {
         collection_size,
         CollectionSizeResponse {
             collection_size: COLLECTION_SIZE
+        }
+    );
+
+    // Mint a few tokens
+    let mint_msg = ExecuteMsg::MintTeam {
+        quantity: 10,
+        extension: None,
+    };
+    let admin = mock_info(ADMIN, &[]);
+    let _ = contract
+        .execute(deps.as_mut(), mock_env(), admin.clone(), mint_msg)
+        .unwrap();
+
+    // Random can't update
+    let random = mock_info("random", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random,
+            ExecuteMsg::SetCollectionSize {
+                collection_size: 50,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
+
+    // Admin can't update to number lower than amount minted
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetCollectionSize { collection_size: 9 },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::InvalidCollectionSize {});
+
+    // Admin can update
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetCollectionSize {
+                collection_size: 20,
+            },
+        )
+        .unwrap();
+    let collection_size: CollectionSizeResponse = from_json(
+        contract
+            .query(deps.as_ref(), mock_env(), QueryMsg::CollectionSize {})
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        collection_size,
+        CollectionSizeResponse {
+            collection_size: 20
         }
     );
 }

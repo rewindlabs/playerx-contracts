@@ -57,4 +57,7 @@ pub enum ContractError {
 
     #[error("Burning is disabled")]
     BurnDisabled {},
+
+    #[error("Invalid collection size")]
+    InvalidCollectionSize {},
 }

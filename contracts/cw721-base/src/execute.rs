@@ -156,6 +156,9 @@ where
                 self.set_allowlist_sale(deps, &info.sender, open)
             }
             ExecuteMsg::SetPublicSale { open } => self.set_public_sale(deps, &info.sender, open),
+            ExecuteMsg::SetCollectionSize { collection_size } => {
+                self.set_collection_size(deps, &info.sender, collection_size)
+            }
         }
     }
 }
@@ -658,6 +661,27 @@ where
         Ok(Response::new()
             .add_attribute("action", "set_public_sale")
             .add_attribute("open", open.to_string()))
+    }
+
+    pub fn set_collection_size(
+        &self,
+        deps: DepsMut,
+        sender: &Addr,
+        collection_size: u64,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(deps.storage, sender)?;
+
+        // Collection size must be greater than or equal to token count
+        let token_count = self.token_count(deps.storage)?;
+        if collection_size < token_count {
+            return Err(ContractError::InvalidCollectionSize {});
+        }
+
+        self.collection_size.save(deps.storage, &collection_size)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "set_collection_size")
+            .add_attribute("collection_size", collection_size.to_string()))
     }
 }
 

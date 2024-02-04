@@ -118,6 +118,8 @@ pub enum ExecuteMsg<T, E> {
     SetOgSale { open: bool },
     /// Sets state of public sale
     SetPublicSale { open: bool },
+    /// Sets collection size
+    SetCollectionSize { collection_size: u64 },
 }
 
 #[cw_ownable_query]
