@@ -15,8 +15,10 @@ pub struct InstantiateMsg {
     // Collection size
     pub collection_size: u64,
     // Sale config
+    pub og_price: Uint128,
     pub allowlist_price: Uint128,
     pub public_price: Uint128,
+    pub max_per_og: u64,
     pub max_per_allowlist: u64,
     pub max_per_public: u64,
 }
@@ -55,6 +57,9 @@ pub enum ExecuteMsg<T, E> {
     /// Mint for the team
     MintTeam { quantity: u64, extension: T },
 
+    /// Mint for og
+    MintOg { quantity: u64, extension: T },
+
     /// Mint for allowlisted addresses
     MintAllowlist { quantity: u64, extension: T },
 
@@ -92,15 +97,25 @@ pub enum ExecuteMsg<T, E> {
     SetBaseTokenUri { base_token_uri: String },
     // /// Sets the sale config
     SetSaleConfig {
+        og_price: Uint128,
         allowlist_price: Uint128,
         public_price: Uint128,
+        max_per_og: u64,
         max_per_allowlist: u64,
         max_per_public: u64,
     },
     /// Add addresses to allowlist
-    SeedAllowlist { addresses: Vec<String> },
+    AddToAllowlist { addresses: Vec<String> },
+    /// Remove addresses from allowlist
+    RemoveFromAllowlist { addresses: Vec<String> },
+    /// Add addresses to og list
+    AddToOgList { addresses: Vec<String> },
+    /// Remove addresses from allowlist
+    RemoveFromOgList { addresses: Vec<String> },
     /// Sets state of allowlist sale
     SetAllowlistSale { open: bool },
+    /// Sets state of allowlist sale
+    SetOgSale { open: bool },
     /// Sets state of public sale
     SetPublicSale { open: bool },
 }
@@ -226,10 +241,13 @@ pub struct BaseTokenUriResponse {
 
 #[cw_serde]
 pub struct SaleConfigResponse {
+    pub og_price: Uint128,
     pub allowlist_price: Uint128,
     pub public_price: Uint128,
+    pub max_per_og: u64,
     pub max_per_allowlist: u64,
     pub max_per_public: u64,
+    pub og_sale_open: bool,
     pub allowlist_sale_open: bool,
     pub public_sale_open: bool,
 }

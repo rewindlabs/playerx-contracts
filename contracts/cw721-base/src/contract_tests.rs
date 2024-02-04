@@ -23,8 +23,10 @@ const BASE_TOKEN_URI: &str = "base_token_uri";
 const COLLECTION_SIZE: u64 = 100;
 const MAX_PER_PUBLIC: u64 = 5;
 const MAX_PER_ALLOWLIST: u64 = 1;
+const MAX_PER_OG: u64 = 1;
 const PUBLIC_PRICE: u64 = 100000;
 const ALLOWLIST_PRICE: u64 = 100000;
+const OG_PRICE: u64 = 100000;
 
 fn setup_contract(deps: DepsMut<'_>) -> Cw721Contract<'static, Extension, Empty, Empty, Empty> {
     let contract = Cw721Contract::default();
@@ -35,8 +37,10 @@ fn setup_contract(deps: DepsMut<'_>) -> Cw721Contract<'static, Extension, Empty,
         collection_size: COLLECTION_SIZE,
         max_per_public: MAX_PER_PUBLIC,
         max_per_allowlist: MAX_PER_ALLOWLIST,
+        max_per_og: MAX_PER_OG,
         public_price: Uint128::from(PUBLIC_PRICE),
         allowlist_price: Uint128::from(ALLOWLIST_PRICE),
+        og_price: Uint128::from(OG_PRICE),
     };
     let info = mock_info(ADMIN, &[]);
     let res = contract.instantiate(deps, mock_env(), info, msg).unwrap();
@@ -56,8 +60,10 @@ fn proper_instantiation() {
         collection_size: COLLECTION_SIZE,
         max_per_public: MAX_PER_PUBLIC,
         max_per_allowlist: MAX_PER_ALLOWLIST,
+        max_per_og: MAX_PER_OG,
         public_price: Uint128::from(PUBLIC_PRICE),
         allowlist_price: Uint128::from(ALLOWLIST_PRICE),
+        og_price: Uint128::from(OG_PRICE),
     };
     let info = mock_info(ADMIN, &[]);
 
@@ -102,10 +108,13 @@ fn update_sale_config() {
     let expected = SaleConfigResponse {
         max_per_public: MAX_PER_PUBLIC,
         max_per_allowlist: MAX_PER_ALLOWLIST,
+        max_per_og: MAX_PER_OG,
         public_price: Uint128::from(PUBLIC_PRICE),
         allowlist_price: Uint128::from(ALLOWLIST_PRICE),
+        og_price: Uint128::from(OG_PRICE),
         public_sale_open: false,
         allowlist_sale_open: false,
+        og_sale_open: false,
     };
     let sale_config: SaleConfigResponse = from_json(
         contract
@@ -117,8 +126,10 @@ fn update_sale_config() {
 
     // Random can't update
     let msg = ExecuteMsg::SetSaleConfig {
+        og_price: Uint128::from(200000u64),
         allowlist_price: Uint128::from(200000u64),
         public_price: Uint128::from(200000u64),
+        max_per_og: 2,
         max_per_allowlist: 2,
         max_per_public: 10,
     };
@@ -135,12 +146,15 @@ fn update_sale_config() {
         .unwrap();
 
     let expected = SaleConfigResponse {
-        max_per_public: 10,
-        max_per_allowlist: 2,
-        public_price: Uint128::from(200000u64),
+        og_price: Uint128::from(200000u64),
         allowlist_price: Uint128::from(200000u64),
+        public_price: Uint128::from(200000u64),
+        max_per_og: 2,
+        max_per_allowlist: 2,
+        max_per_public: 10,
         public_sale_open: false,
         allowlist_sale_open: false,
+        og_sale_open: false,
     };
     let sale_config: SaleConfigResponse = from_json(
         contract
@@ -167,12 +181,15 @@ fn update_sale_state() {
         )
         .unwrap();
     let expected = SaleConfigResponse {
+        max_per_og: MAX_PER_OG,
         max_per_public: MAX_PER_PUBLIC,
         max_per_allowlist: MAX_PER_ALLOWLIST,
+        og_price: Uint128::from(OG_PRICE),
         public_price: Uint128::from(PUBLIC_PRICE),
         allowlist_price: Uint128::from(ALLOWLIST_PRICE),
         public_sale_open: false,
         allowlist_sale_open: true,
+        og_sale_open: false,
     };
     let sale_config: SaleConfigResponse = from_json(
         contract
@@ -192,10 +209,41 @@ fn update_sale_state() {
         )
         .unwrap();
     let expected = SaleConfigResponse {
+        max_per_og: MAX_PER_OG,
         max_per_public: MAX_PER_PUBLIC,
         max_per_allowlist: MAX_PER_ALLOWLIST,
+        og_price: Uint128::from(OG_PRICE),
         public_price: Uint128::from(PUBLIC_PRICE),
         allowlist_price: Uint128::from(ALLOWLIST_PRICE),
+        og_sale_open: false,
+        public_sale_open: true,
+        allowlist_sale_open: true,
+    };
+    let sale_config: SaleConfigResponse = from_json(
+        contract
+            .query(deps.as_ref(), mock_env(), QueryMsg::SaleConfig {})
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(expected, sale_config);
+
+    // Update og sale
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            info.clone(),
+            ExecuteMsg::SetOgSale { open: true },
+        )
+        .unwrap();
+    let expected = SaleConfigResponse {
+        max_per_og: MAX_PER_OG,
+        max_per_public: MAX_PER_PUBLIC,
+        max_per_allowlist: MAX_PER_ALLOWLIST,
+        og_price: Uint128::from(OG_PRICE),
+        public_price: Uint128::from(PUBLIC_PRICE),
+        allowlist_price: Uint128::from(ALLOWLIST_PRICE),
+        og_sale_open: true,
         public_sale_open: true,
         allowlist_sale_open: true,
     };
@@ -224,6 +272,15 @@ fn update_sale_state() {
             mock_env(),
             random.clone(),
             ExecuteMsg::SetPublicSale { open: false },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random,
+            ExecuteMsg::SetOgSale { open: false },
         )
         .unwrap_err();
     assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
@@ -389,6 +446,151 @@ fn mint_team() {
 }
 
 #[test]
+fn mint_og() {
+    let mut deps = mock_dependencies();
+    let contract = setup_contract(deps.as_mut());
+
+    // Open og minting
+    let admin = mock_info(ADMIN, &[]);
+    contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::SetOgSale { open: true },
+        )
+        .unwrap();
+
+    // random can't mint if not og
+    let random = mock_info("random", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random.clone(),
+            ExecuteMsg::MintOg {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnOgList {});
+
+    // random can't add to og list
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random.clone(),
+            ExecuteMsg::AddToOgList {
+                addresses: vec!["random".to_string()],
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::Ownership(OwnershipError::NotOwner));
+
+    // Admin can add to og list
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin.clone(),
+            ExecuteMsg::AddToOgList {
+                addresses: vec!["random".to_string(), "user".to_string()],
+            },
+        )
+        .unwrap();
+
+    // Random can't mint more than max
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random.clone(),
+            ExecuteMsg::MintOg {
+                quantity: 2,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::MaxMintReached {});
+
+    // Cannot mint without funds
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random,
+            ExecuteMsg::MintOg {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::InsufficientFunds {});
+
+    // Successful mint
+    let funds = coins(100000, "usei");
+    let random_with_funds = mock_info("random", &funds);
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random_with_funds.clone(),
+            ExecuteMsg::MintOg {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap();
+
+    // ensure num tokens increases
+    let count = contract.num_tokens(deps.as_ref()).unwrap();
+    assert_eq!(1, count.count);
+
+    // Can't mint again
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            random_with_funds,
+            ExecuteMsg::MintOg {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnOgList {});
+
+    // Remove user from allowlist
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::RemoveFromOgList {
+                addresses: vec!["user".to_string()],
+            },
+        )
+        .unwrap();
+
+    // User can't mint
+    let user = mock_info("user", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            user,
+            ExecuteMsg::MintOg {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnOgList {});
+}
+
+#[test]
 fn mint_allowlist() {
     let mut deps = mock_dependencies();
     let contract = setup_contract(deps.as_mut());
@@ -403,20 +605,6 @@ fn mint_allowlist() {
             ExecuteMsg::SetAllowlistSale { open: true },
         )
         .unwrap();
-
-    let random = mock_info("random", &[]);
-    let err = contract
-        .execute(
-            deps.as_mut(),
-            mock_env(),
-            random.clone(),
-            ExecuteMsg::MintAllowlist {
-                quantity: 1,
-                extension: None,
-            },
-        )
-        .unwrap_err();
-    assert_eq!(err, ContractError::NotOnAllowlist {});
 
     // random can't mint if not allowlisted
     let random = mock_info("random", &[]);
@@ -439,7 +627,7 @@ fn mint_allowlist() {
             deps.as_mut(),
             mock_env(),
             random.clone(),
-            ExecuteMsg::SeedAllowlist {
+            ExecuteMsg::AddToAllowlist {
                 addresses: vec!["random".to_string()],
             },
         )
@@ -451,9 +639,9 @@ fn mint_allowlist() {
         .execute(
             deps.as_mut(),
             mock_env(),
-            admin,
-            ExecuteMsg::SeedAllowlist {
-                addresses: vec!["random".to_string()],
+            admin.clone(),
+            ExecuteMsg::AddToAllowlist {
+                addresses: vec!["random".to_string(), "user".to_string()],
             },
         )
         .unwrap();
@@ -511,6 +699,33 @@ fn mint_allowlist() {
             deps.as_mut(),
             mock_env(),
             random_with_funds,
+            ExecuteMsg::MintAllowlist {
+                quantity: 1,
+                extension: None,
+            },
+        )
+        .unwrap_err();
+    assert_eq!(err, ContractError::NotOnAllowlist {});
+
+    // Remove user from allowlist
+    let _ = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            admin,
+            ExecuteMsg::RemoveFromAllowlist {
+                addresses: vec!["user".to_string()],
+            },
+        )
+        .unwrap();
+
+    // User can't mint
+    let user = mock_info("user", &[]);
+    let err = contract
+        .execute(
+            deps.as_mut(),
+            mock_env(),
+            user,
             ExecuteMsg::MintAllowlist {
                 quantity: 1,
                 extension: None,

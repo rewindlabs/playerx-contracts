@@ -26,6 +26,7 @@ where
     pub withdraw_address: Item<'a, String>,
     pub sale_config: Item<'a, SaleConfigResponse>,
     pub allowlist: Map<'a, &'a Addr, bool>,
+    pub og_list: Map<'a, &'a Addr, bool>,
 
     pub(crate) _custom_response: PhantomData<C>,
     pub(crate) _custom_query: PhantomData<Q>,
@@ -60,6 +61,7 @@ where
             "withdraw_address",
             "sale_config",
             "allowlist",
+            "og_list_key",
         )
     }
 }
@@ -82,6 +84,7 @@ where
         withdraw_address_key: &'a str,
         sale_config_key: &'a str,
         allowlist_key: &'a str,
+        og_list_key: &'a str,
     ) -> Self {
         let indexes = TokenIndexes {
             owner: MultiIndex::new(token_owner_idx, tokens_key, tokens_owner_key),
@@ -96,6 +99,7 @@ where
             withdraw_address: Item::new(withdraw_address_key),
             sale_config: Item::new(sale_config_key),
             allowlist: Map::new(allowlist_key),
+            og_list: Map::new(og_list_key),
             _custom_response: PhantomData,
             _custom_execute: PhantomData,
             _custom_query: PhantomData,

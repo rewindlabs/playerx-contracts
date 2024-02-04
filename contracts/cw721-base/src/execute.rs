@@ -51,10 +51,13 @@ where
         let sale_config = SaleConfigResponse {
             max_per_public: msg.max_per_public,
             max_per_allowlist: msg.max_per_allowlist,
+            max_per_og: msg.max_per_og,
             public_price: msg.public_price,
             allowlist_price: msg.allowlist_price,
+            og_price: msg.og_price,
             public_sale_open: false,
             allowlist_sale_open: false,
+            og_sale_open: false,
         };
         self.sale_config.save(deps.storage, &sale_config)?;
         Ok(Response::default())
@@ -73,6 +76,10 @@ where
                 quantity,
                 extension,
             } => self.mint_team(deps, info, quantity, extension),
+            ExecuteMsg::MintOg {
+                quantity,
+                extension,
+            } => self.mint_og(deps, info, quantity, extension),
             ExecuteMsg::MintAllowlist {
                 quantity,
                 extension,
@@ -116,21 +123,35 @@ where
                 self.set_base_token_uri(deps, &info.sender, base_token_uri)
             }
             ExecuteMsg::SetSaleConfig {
+                og_price,
                 allowlist_price,
                 public_price,
+                max_per_og,
                 max_per_allowlist,
                 max_per_public,
             } => self.set_sale_config(
                 deps,
                 &info.sender,
+                og_price,
                 allowlist_price,
                 public_price,
+                max_per_og,
                 max_per_allowlist,
                 max_per_public,
             ),
-            ExecuteMsg::SeedAllowlist { addresses } => {
-                self.seed_allowlist(deps, &info.sender, addresses)
+            ExecuteMsg::AddToOgList { addresses } => {
+                self.add_to_og_list(deps, &info.sender, addresses)
             }
+            ExecuteMsg::RemoveFromOgList { addresses } => {
+                self.remove_from_og_list(deps, &info.sender, addresses)
+            }
+            ExecuteMsg::AddToAllowlist { addresses } => {
+                self.add_to_allowlist(deps, &info.sender, addresses)
+            }
+            ExecuteMsg::RemoveFromAllowlist { addresses } => {
+                self.remove_from_allowlist(deps, &info.sender, addresses)
+            }
+            ExecuteMsg::SetOgSale { open } => self.set_og_sale(deps, &info.sender, open),
             ExecuteMsg::SetAllowlistSale { open } => {
                 self.set_allowlist_sale(deps, &info.sender, open)
             }
@@ -191,6 +212,82 @@ where
 
         Ok(Response::new()
             .add_attribute("action", "mint")
+            .add_attribute("minter", info.sender)
+            .add_attribute("quantity", quantity.to_string()))
+    }
+
+    pub fn mint_og(
+        &self,
+        deps: DepsMut,
+        info: MessageInfo,
+        quantity: u64,
+        extension: T,
+    ) -> Result<Response<C>, ContractError> {
+        let sale_config = self.sale_config.load(deps.storage)?;
+
+        // Check that og sale is open
+        if !sale_config.og_sale_open {
+            return Err(ContractError::OgSaleClosed {});
+        }
+
+        if quantity == 0 {
+            return Err(ContractError::InvalidQuantity {});
+        }
+
+        // Verify if the sender is on the og list
+        let is_og = self
+            .og_list
+            .may_load(deps.storage, &info.sender)?
+            .unwrap_or(false);
+        if !is_og {
+            return Err(ContractError::NotOnOgList {});
+        }
+
+        // Make sure quantity doesn't exceed max per og
+        if quantity > sale_config.max_per_og {
+            return Err(ContractError::MaxMintReached {});
+        }
+
+        // Make sure number of tokens doesn't exceed collection size
+        let collection_size = self.collection_size.load(deps.storage)?;
+        let token_count = self.token_count(deps.storage)?;
+        if token_count + quantity > collection_size {
+            return Err(ContractError::MaxSupplyReached {});
+        }
+
+        // Make sure enough funds are sent
+        let total_price = sale_config.og_price.multiply_ratio(quantity, 1u64);
+        let sent_amount = info
+            .funds
+            .iter()
+            .find(|coin| coin.denom == "usei")
+            .map_or(Uint128::zero(), |coin| coin.amount);
+        if sent_amount < total_price {
+            return Err(ContractError::InsufficientFunds {});
+        }
+
+        // Create tokens based on quantity
+        for i in 0..quantity {
+            let token_id = (token_count + i).to_string();
+            let token = TokenInfo {
+                owner: info.sender.clone(),
+                approvals: vec![],
+                extension: extension.clone(),
+            };
+            self.tokens
+                .update(deps.storage, &token_id, |old| match old {
+                    Some(_) => Err(ContractError::Claimed {}),
+                    None => Ok(token),
+                })?;
+        }
+
+        // Update the total minted count
+        self.increment_tokens(deps.storage, quantity)?;
+        // Remove from og list
+        self.og_list.remove(deps.storage, &info.sender);
+
+        Ok(Response::new()
+            .add_attribute("action", "mint_og")
             .add_attribute("minter", info.sender)
             .add_attribute("quantity", quantity.to_string()))
     }
@@ -420,29 +517,67 @@ where
         &self,
         deps: DepsMut,
         sender: &Addr,
+        og_price: Uint128,
         allowlist_price: Uint128,
         public_price: Uint128,
+        max_per_og: u64,
         max_per_allowlist: u64,
         max_per_public: u64,
     ) -> Result<Response<C>, ContractError> {
         cw_ownable::assert_owner(deps.storage, sender)?;
 
         let mut sale_config = self.sale_config.load(deps.storage)?;
+        sale_config.og_price = og_price;
         sale_config.allowlist_price = allowlist_price;
         sale_config.public_price = public_price;
+        sale_config.max_per_og = max_per_og;
         sale_config.max_per_allowlist = max_per_allowlist;
         sale_config.max_per_public = max_per_public;
         self.sale_config.save(deps.storage, &sale_config)?;
 
         Ok(Response::new()
             .add_attribute("action", "set_sale_config")
+            .add_attribute("og_price", og_price)
             .add_attribute("allowlist_price", allowlist_price)
             .add_attribute("public_price", public_price)
+            .add_attribute("max_per_og", max_per_og.to_string())
             .add_attribute("max_per_allowlist", max_per_allowlist.to_string())
             .add_attribute("max_per_public", max_per_public.to_string()))
     }
 
-    pub fn seed_allowlist(
+    pub fn add_to_og_list(
+        &self,
+        deps: DepsMut,
+        sender: &Addr,
+        addresses: Vec<String>,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(deps.storage, sender)?;
+        for address in addresses.clone() {
+            let og_addr = deps.api.addr_validate(&address)?;
+            self.og_list.save(deps.storage, &og_addr, &true)?;
+        }
+        Ok(Response::new()
+            .add_attribute("action", "add_to_og_list")
+            .add_attribute("num_addresses", addresses.len().to_string()))
+    }
+
+    pub fn remove_from_og_list(
+        &self,
+        deps: DepsMut,
+        sender: &Addr,
+        addresses: Vec<String>,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(deps.storage, sender)?;
+        for address in addresses.clone() {
+            let og_addr = deps.api.addr_validate(&address)?;
+            self.og_list.remove(deps.storage, &og_addr);
+        }
+        Ok(Response::new()
+            .add_attribute("action", "remove_from_og_list")
+            .add_attribute("num_addresses", addresses.len().to_string()))
+    }
+
+    pub fn add_to_allowlist(
         &self,
         deps: DepsMut,
         sender: &Addr,
@@ -454,8 +589,41 @@ where
             self.allowlist.save(deps.storage, &allowlist_addr, &true)?;
         }
         Ok(Response::new()
-            .add_attribute("action", "seed_allowlist")
+            .add_attribute("action", "add_to_allowlist")
             .add_attribute("num_addresses", addresses.len().to_string()))
+    }
+
+    pub fn remove_from_allowlist(
+        &self,
+        deps: DepsMut,
+        sender: &Addr,
+        addresses: Vec<String>,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(deps.storage, sender)?;
+        for address in addresses.clone() {
+            let allowlist_addr = deps.api.addr_validate(&address)?;
+            self.allowlist.remove(deps.storage, &allowlist_addr);
+        }
+        Ok(Response::new()
+            .add_attribute("action", "remove_from_allowlist")
+            .add_attribute("num_addresses", addresses.len().to_string()))
+    }
+
+    pub fn set_og_sale(
+        &self,
+        deps: DepsMut,
+        sender: &Addr,
+        open: bool,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(deps.storage, sender)?;
+
+        let mut sale_config = self.sale_config.load(deps.storage)?;
+        sale_config.og_sale_open = open;
+        self.sale_config.save(deps.storage, &sale_config)?;
+
+        Ok(Response::new()
+            .add_attribute("action", "set_og_sale")
+            .add_attribute("open", open.to_string()))
     }
 
     pub fn set_allowlist_sale(

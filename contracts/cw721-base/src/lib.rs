@@ -114,8 +114,10 @@ mod tests {
                 collection_size: 10,
                 max_per_public: 5,
                 max_per_allowlist: 1,
+                max_per_og: 1,
                 public_price: Uint128::from(100u64),
                 allowlist_price: Uint128::from(100u64),
+                og_price: Uint128::from(100u64),
             },
         )
         .unwrap();
@@ -151,8 +153,10 @@ mod tests {
                 collection_size: 10,
                 max_per_public: 5,
                 max_per_allowlist: 1,
+                max_per_og: 1,
                 public_price: Uint128::from(100u64),
                 allowlist_price: Uint128::from(100u64),
+                og_price: Uint128::from(100u64),
             },
         )
         .unwrap();

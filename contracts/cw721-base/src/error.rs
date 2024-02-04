@@ -31,11 +31,17 @@ pub enum ContractError {
     #[error("Standard minting is disabled")]
     MintDisabled,
 
+    #[error("Og sale sale is closed")]
+    OgSaleClosed {},
+
     #[error("Allowlist sale is closed")]
     AllowlistSaleClosed {},
 
     #[error("Public sale is closed")]
     PublicSaleClosed {},
+
+    #[error("Not on og list")]
+    NotOnOgList {},
 
     #[error("Not on allowlist")]
     NotOnAllowlist {},
