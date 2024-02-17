@@ -348,7 +348,7 @@ dependencies = [
  "cw-ownable",
  "cw-storage-plus 1.2.0",
  "cw2 1.1.2",
- "cw721 0.18.0",
+ "cw721 0.17.0",
  "cw721-base 0.1.0",
  "schemars",
  "serde",
@@ -370,9 +370,9 @@ dependencies = [
 
 [[package]]
 name = "cw721"
-version = "0.18.0"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3c4d286625ccadc957fe480dd3bdc54ada19e0e6b5b9325379db3130569e914"
+checksum = "aa49f5096cc1587489ac5d1d345936e8139738f40ad07a94c7b157b19f975c00"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -392,7 +392,7 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "cw721 0.18.0",
+ "cw721 0.17.0",
  "cw721-base 0.16.0",
  "schemars",
  "serde",
@@ -427,7 +427,7 @@ dependencies = [
  "cw-storage-plus 1.2.0",
  "cw-utils 1.0.3",
  "cw2 1.1.2",
- "cw721 0.18.0",
+ "cw721 0.17.0",
  "cw721-base 0.16.0",
  "schemars",
  "serde",
