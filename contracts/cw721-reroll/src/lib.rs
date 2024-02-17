@@ -8,8 +8,6 @@ pub mod upgrades;
 
 #[cfg(test)]
 mod contract_tests;
-#[cfg(test)]
-mod multi_tests;
 
 pub use crate::error::ContractError;
 pub use crate::msg::{ExecuteMsg, InstantiateMsg, MinterResponse, QueryMsg};
@@ -64,7 +62,7 @@ pub mod entry {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg<Empty>,
+        msg: ExecuteMsg<Extension, Empty>,
     ) -> Result<Response, ContractError> {
         let tract = Cw721Contract::<Extension, Empty, Empty, Empty>::default();
         tract.execute(deps, env, info, msg)

@@ -54,10 +54,13 @@ where
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg<E>,
+        msg: ExecuteMsg<T, E>,
     ) -> Result<Response<C>, ContractError> {
         match msg {
-            ExecuteMsg::Mint { num_tokens } => self.mint(deps, info, num_tokens),
+            ExecuteMsg::Mint {
+                quantity,
+                extension,
+            } => self.mint(deps, info, quantity, extension),
             ExecuteMsg::Approve {
                 spender,
                 token_id,
@@ -108,30 +111,41 @@ where
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        num_tokens: u64,
+        quantity: u64,
+        extension: T,
     ) -> Result<Response<C>, ContractError> {
         cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-        // create num_tokens amount of tokens
-        // let token = TokenInfo {
-        //     owner: deps.api.addr_validate(&owner)?,
-        //     approvals: vec![],
-        //     token_uri,
-        //     extension,
-        // };
-        // self.tokens
-        //     .update(deps.storage, &token_id, |old| match old {
-        //         Some(_) => Err(ContractError::Claimed {}),
-        //         None => Ok(token),
-        //     })?;
+        if quantity == 0 {
+            return Err(ContractError::InvalidQuantity {});
+        }
 
-        // self.increment_tokens(deps.storage)?;
+        // Create tokens based on quantity
+        let tokens_minuted = self.tokens_minted(deps.storage)?;
+        for i in 0..quantity {
+            // Create the token
+            let token_id = (tokens_minuted + i).to_string();
+            let token = TokenInfo {
+                owner: info.sender.clone(),
+                approvals: vec![],
+                extension: extension.clone(),
+            };
+            self.tokens
+                .update(deps.storage, &token_id, |old| match old {
+                    Some(_) => Err(ContractError::Claimed {}),
+                    None => Ok(token),
+                })?;
+        }
+
+        // Update total minted count
+        self.increment_tokens_minted(deps.storage, quantity)?;
+        // Update the total total count
+        self.increment_tokens(deps.storage, quantity)?;
 
         Ok(Response::new()
             .add_attribute("action", "mint")
-            .add_attribute("minter", info.sender.clone())
-            .add_attribute("owner", info.sender)
-            .add_attribute("num_tokens", num_tokens.to_string()))
+            .add_attribute("minter", info.sender)
+            .add_attribute("quantity", quantity.to_string()))
     }
 
     pub fn update_ownership(

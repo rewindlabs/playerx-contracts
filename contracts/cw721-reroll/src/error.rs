@@ -24,4 +24,7 @@ pub enum ContractError {
 
     #[error("No withdraw address set")]
     NoWithdrawAddress {},
+
+    #[error("Invalid quantity")]
+    InvalidQuantity {},
 }

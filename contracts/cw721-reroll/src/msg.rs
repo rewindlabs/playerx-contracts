@@ -26,7 +26,7 @@ pub struct InstantiateMsg {
 /// use other control logic in any contract that inherits this.
 #[cw_ownable_execute]
 #[cw_serde]
-pub enum ExecuteMsg<E> {
+pub enum ExecuteMsg<T, E> {
     /// Transfer is a base message to move a token to another account without triggering actions
     TransferNft { recipient: String, token_id: String },
     /// Send is a base message to transfer a token to a contract and trigger an action
@@ -57,7 +57,8 @@ pub enum ExecuteMsg<E> {
     /// Mint a new NFT, can only be called by the contract minter
     Mint {
         /// Number of tokens to mint
-        num_tokens: u64,
+        quantity: u64,
+        extension: T,
     },
 
     /// Burn an NFT the sender has access to

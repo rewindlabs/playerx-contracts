@@ -64,6 +64,7 @@ where
     E: CustomMsg,
     Q: CustomMsg,
 {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         contract_key: &'a str,
         token_count_key: &'a str,
@@ -95,8 +96,8 @@ where
         Ok(self.token_count.may_load(storage)?.unwrap_or_default())
     }
 
-    pub fn increment_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
-        let val = self.token_count(storage)? + 1;
+    pub fn increment_tokens(&self, storage: &mut dyn Storage, quantity: u64) -> StdResult<u64> {
+        let val = self.token_count(storage)? + quantity;
         self.token_count.save(storage, &val)?;
         Ok(val)
     }
@@ -104,6 +105,20 @@ where
     pub fn decrement_tokens(&self, storage: &mut dyn Storage) -> StdResult<u64> {
         let val = self.token_count(storage)? - 1;
         self.token_count.save(storage, &val)?;
+        Ok(val)
+    }
+
+    pub fn tokens_minted(&self, storage: &dyn Storage) -> StdResult<u64> {
+        Ok(self.tokens_minted.may_load(storage)?.unwrap_or_default())
+    }
+
+    pub fn increment_tokens_minted(
+        &self,
+        storage: &mut dyn Storage,
+        quantity: u64,
+    ) -> StdResult<u64> {
+        let val: u64 = self.tokens_minted(storage)? + quantity;
+        self.tokens_minted.save(storage, &val)?;
         Ok(val)
     }
 }
@@ -114,12 +129,6 @@ pub struct TokenInfo<T> {
     pub owner: Addr,
     /// Approvals are stored here, as we clear them all upon transfer and cannot accumulate much
     pub approvals: Vec<Approval>,
-
-    /// Universal resource identifier for this NFT
-    /// Should point to a JSON file that conforms to the ERC721
-    /// Metadata JSON Schema
-    pub token_uri: Option<String>,
-
     /// You can add any custom metadata here when you extend cw721-base
     pub extension: T,
 }
