@@ -26,7 +26,7 @@ impl<Q: CustomMsg, E: CustomMsg> Cw721Contract<Q, E> {
         self.0.clone()
     }
 
-    pub fn call<T: Serialize>(&self, msg: ExecuteMsg<T, E>) -> StdResult<CosmosMsg> {
+    pub fn call<T: Serialize>(&self, msg: ExecuteMsg<E>) -> StdResult<CosmosMsg> {
         let msg = to_json_binary(&msg)?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),

@@ -64,7 +64,7 @@ pub mod entry {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg<Extension, Empty>,
+        msg: ExecuteMsg<Empty>,
     ) -> Result<Response, ContractError> {
         let tract = Cw721Contract::<Extension, Empty, Empty, Empty>::default();
         tract.execute(deps, env, info, msg)
@@ -111,6 +111,7 @@ mod tests {
                 symbol: "".into(),
                 minter: Some("other".into()),
                 withdraw_address: None,
+                base_token_uri: None,
             },
         )
         .unwrap();
@@ -144,6 +145,7 @@ mod tests {
                 symbol: "".into(),
                 minter: None,
                 withdraw_address: None,
+                base_token_uri: None,
             },
         )
         .unwrap();

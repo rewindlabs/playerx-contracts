@@ -16,6 +16,8 @@ where
 {
     pub contract_info: Item<'a, ContractInfoResponse>,
     pub token_count: Item<'a, u64>,
+    pub tokens_minted: Item<'a, u64>,
+    pub base_token_uri: Item<'a, String>,
     /// Stored as (granter, operator) giving operator full control over granter's account
     pub operators: Map<'a, (&'a Addr, &'a Addr), Expiration>,
     pub tokens: IndexedMap<'a, &'a str, TokenInfo<T>, TokenIndexes<'a, T>>,
@@ -46,6 +48,8 @@ where
         Self::new(
             "nft_info",
             "num_tokens",
+            "tokens_minted",
+            "base_token_uri",
             "operators",
             "tokens",
             "tokens__owner",
@@ -63,6 +67,8 @@ where
     fn new(
         contract_key: &'a str,
         token_count_key: &'a str,
+        tokens_minted_key: &'a str,
+        base_token_uri_key: &'a str,
         operator_key: &'a str,
         tokens_key: &'a str,
         tokens_owner_key: &'a str,
@@ -74,6 +80,8 @@ where
         Self {
             contract_info: Item::new(contract_key),
             token_count: Item::new(token_count_key),
+            tokens_minted: Item::new(tokens_minted_key),
+            base_token_uri: Item::new(base_token_uri_key),
             operators: Map::new(operator_key),
             tokens: IndexedMap::new(tokens_key, indexes),
             withdraw_address: Item::new(withdraw_address_key),

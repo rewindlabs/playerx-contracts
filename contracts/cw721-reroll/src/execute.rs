@@ -38,6 +38,10 @@ where
         };
         cw_ownable::initialize_owner(deps.storage, deps.api, Some(owner.as_ref()))?;
 
+        if let Some(base_token_uri) = msg.base_token_uri {
+            self.base_token_uri.save(deps.storage, &base_token_uri)?;
+        }
+
         if let Some(address) = msg.withdraw_address {
             self.set_withdraw_address(deps, &owner, address)?;
         }
@@ -50,15 +54,10 @@ where
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg<T, E>,
+        msg: ExecuteMsg<E>,
     ) -> Result<Response<C>, ContractError> {
         match msg {
-            ExecuteMsg::Mint {
-                token_id,
-                owner,
-                token_uri,
-                extension,
-            } => self.mint(deps, info, token_id, owner, token_uri, extension),
+            ExecuteMsg::Mint { num_tokens } => self.mint(deps, info, num_tokens),
             ExecuteMsg::Approve {
                 spender,
                 token_id,
@@ -90,6 +89,9 @@ where
                 self.remove_withdraw_address(deps.storage, &info.sender)
             }
             ExecuteMsg::WithdrawFunds { amount } => self.withdraw_funds(deps.storage, &amount),
+            ExecuteMsg::SetBaseTokenUri { base_token_uri } => {
+                self.set_base_token_uri(deps.storage, &info.sender, base_token_uri)
+            }
         }
     }
 }
@@ -106,33 +108,30 @@ where
         &self,
         deps: DepsMut,
         info: MessageInfo,
-        token_id: String,
-        owner: String,
-        token_uri: Option<String>,
-        extension: T,
+        num_tokens: u64,
     ) -> Result<Response<C>, ContractError> {
         cw_ownable::assert_owner(deps.storage, &info.sender)?;
 
-        // create the token
-        let token = TokenInfo {
-            owner: deps.api.addr_validate(&owner)?,
-            approvals: vec![],
-            token_uri,
-            extension,
-        };
-        self.tokens
-            .update(deps.storage, &token_id, |old| match old {
-                Some(_) => Err(ContractError::Claimed {}),
-                None => Ok(token),
-            })?;
+        // create num_tokens amount of tokens
+        // let token = TokenInfo {
+        //     owner: deps.api.addr_validate(&owner)?,
+        //     approvals: vec![],
+        //     token_uri,
+        //     extension,
+        // };
+        // self.tokens
+        //     .update(deps.storage, &token_id, |old| match old {
+        //         Some(_) => Err(ContractError::Claimed {}),
+        //         None => Ok(token),
+        //     })?;
 
-        self.increment_tokens(deps.storage)?;
+        // self.increment_tokens(deps.storage)?;
 
         Ok(Response::new()
             .add_attribute("action", "mint")
-            .add_attribute("minter", info.sender)
-            .add_attribute("owner", owner)
-            .add_attribute("token_id", token_id))
+            .add_attribute("minter", info.sender.clone())
+            .add_attribute("owner", info.sender)
+            .add_attribute("num_tokens", num_tokens.to_string()))
     }
 
     pub fn update_ownership(
@@ -197,6 +196,19 @@ where
             }
             None => Err(ContractError::NoWithdrawAddress {}),
         }
+    }
+
+    pub fn set_base_token_uri(
+        &self,
+        storage: &mut dyn Storage,
+        sender: &Addr,
+        base_token_uri: String,
+    ) -> Result<Response<C>, ContractError> {
+        cw_ownable::assert_owner(storage, sender)?;
+        self.base_token_uri.save(storage, &base_token_uri)?;
+        Ok(Response::new()
+            .add_attribute("action", "set_base_token_uri")
+            .add_attribute("base_token_uri", base_token_uri))
     }
 }
 

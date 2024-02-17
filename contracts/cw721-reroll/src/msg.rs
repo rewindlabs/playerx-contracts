@@ -17,6 +17,8 @@ pub struct InstantiateMsg {
     pub minter: Option<String>,
 
     pub withdraw_address: Option<String>,
+
+    pub base_token_uri: Option<String>,
 }
 
 /// This is like Cw721ExecuteMsg but we add a Mint command for an owner
@@ -24,7 +26,7 @@ pub struct InstantiateMsg {
 /// use other control logic in any contract that inherits this.
 #[cw_ownable_execute]
 #[cw_serde]
-pub enum ExecuteMsg<T, E> {
+pub enum ExecuteMsg<E> {
     /// Transfer is a base message to move a token to another account without triggering actions
     TransferNft { recipient: String, token_id: String },
     /// Send is a base message to transfer a token to a contract and trigger an action
@@ -54,16 +56,8 @@ pub enum ExecuteMsg<T, E> {
 
     /// Mint a new NFT, can only be called by the contract minter
     Mint {
-        /// Unique ID of the NFT
-        token_id: String,
-        /// The owner of the newly minter NFT
-        owner: String,
-        /// Universal resource identifier for this NFT
-        /// Should point to a JSON file that conforms to the ERC721
-        /// Metadata JSON Schema
-        token_uri: Option<String>,
-        /// Any custom extension used by this contract
-        extension: T,
+        /// Number of tokens to mint
+        num_tokens: u64,
     },
 
     /// Burn an NFT the sender has access to
@@ -79,6 +73,8 @@ pub enum ExecuteMsg<T, E> {
     /// Withdraw from the contract to the given address. Anyone can call this,
     /// which is okay since withdraw address has been set by owner.
     WithdrawFunds { amount: Coin },
+    /// Sets the base_token_uri for the contract
+    SetBaseTokenUri { base_token_uri: String },
 }
 
 #[cw_ownable_query]
@@ -170,10 +166,19 @@ pub enum QueryMsg<Q: JsonSchema> {
 
     #[returns(Option<String>)]
     GetWithdrawAddress {},
+
+    /// Returns base token uri
+    #[returns(BaseTokenUriResponse)]
+    BaseTokenUri {},
 }
 
 /// Shows who can mint these tokens
 #[cw_serde]
 pub struct MinterResponse {
     pub minter: Option<String>,
+}
+
+#[cw_serde]
+pub struct BaseTokenUriResponse {
+    pub base_token_uri: String,
 }

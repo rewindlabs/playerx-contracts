@@ -13,7 +13,7 @@ use cw721::{
 use cw_storage_plus::Bound;
 use cw_utils::maybe_addr;
 
-use crate::msg::{MinterResponse, QueryMsg};
+use crate::msg::{BaseTokenUriResponse, MinterResponse, QueryMsg};
 use crate::state::{Approval, Cw721Contract, TokenInfo};
 
 const DEFAULT_LIMIT: u32 = 10;
@@ -37,8 +37,10 @@ where
 
     fn nft_info(&self, deps: Deps, token_id: String) -> StdResult<NftInfoResponse<T>> {
         let info = self.tokens.load(deps.storage, &token_id)?;
+        let base_token_uri = self.base_token_uri.load(deps.storage)?;
+        let token_uri = format!("{}/{}", base_token_uri, token_id);
         Ok(NftInfoResponse {
-            token_uri: info.token_uri,
+            token_uri: Some(token_uri),
             extension: info.extension,
         })
     }
@@ -228,13 +230,15 @@ where
         include_expired: bool,
     ) -> StdResult<AllNftInfoResponse<T>> {
         let info = self.tokens.load(deps.storage, &token_id)?;
+        let base_token_uri = self.base_token_uri.load(deps.storage)?;
+        let token_uri = format!("{}/{}", base_token_uri, token_id);
         Ok(AllNftInfoResponse {
             access: OwnerOfResponse {
                 owner: info.owner.to_string(),
                 approvals: humanize_approvals(&env.block, &info, include_expired),
             },
             info: NftInfoResponse {
-                token_uri: info.token_uri,
+                token_uri: Some(token_uri),
                 extension: info.extension,
             },
         })
@@ -328,6 +332,12 @@ where
             QueryMsg::Extension { msg: _ } => Ok(Binary::default()),
             QueryMsg::GetWithdrawAddress {} => {
                 to_json_binary(&self.withdraw_address.may_load(deps.storage)?)
+            }
+            QueryMsg::BaseTokenUri {} => {
+                let base_token_uri = self.base_token_uri.may_load(deps.storage)?;
+                to_json_binary(&BaseTokenUriResponse {
+                    base_token_uri: base_token_uri.unwrap_or_default(),
+                })
             }
         }
     }
